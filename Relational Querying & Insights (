@@ -1,0 +1,72 @@
+import os
+import sqlite3
+import pandas as pd
+
+# 1. SETUP DB PATH
+data_folder = "/home/dawood-raza/Desktop/New Folder/Retail_Sales_Intelligence/Data"
+db_path = os.path.join(data_folder, "retail_data.db")
+
+# 2. CONNECT TO DATABASE
+conn = sqlite3.connect(db_path)
+
+print("====================================================")
+print("   🚀 RUNNING RELATIONAL SQL QUERIES FOR INSIGHTS   ")
+print("====================================================\n")
+
+# --- QUERY 1: Top 5 Highest Grossing Shopping Malls ---
+# We must JOIN fact_sales with dim_malls to match mall_id to the actual mall_name
+query_malls = """    SELECT 
+        m.mall_name AS "Shopping Mall",
+        COUNT(f.invoice_no) AS "Total Transactions",
+        ROUND(SUM(f.total_revenue), 2) AS "Total Revenue"
+    FROM fact_sales f
+    JOIN dim_malls m ON f.mall_id = m.mall_id
+    GROUP BY m.mall_name
+    ORDER BY "Total Revenue" DESC
+    LIMIT 5;
+"""
+
+print("🏆 INSIGHT 1: Top 5 Malls by Total Revenue")
+df_malls = pd.read_sql(query_malls, conn)
+print(df_malls.to_string(index=False))
+print("\n" + "-"*50 + "\n")
+
+
+# --- QUERY 2: Most Popular Payment Methods ---
+# We JOIN fact_sales with dim_payments to analyze transaction volume
+query_payments = """
+    SELECT 
+        p.payment_method AS "Payment Method",
+        COUNT(f.invoice_no) AS "Number of Uses",
+        ROUND(SUM(f.total_revenue), 2) AS "Total Revenue Shared"
+    FROM fact_sales f
+    JOIN dim_payments p ON f.payment_id = p.payment_id
+    GROUP BY p.payment_method
+    ORDER BY "Number of Uses" DESC;
+"""
+
+print("💳 INSIGHT 2: Payment Method Breakdown")
+df_payments = pd.read_sql(query_payments, conn)
+print(df_payments.to_string(index=False))
+print("\n" + "-"*50 + "\n")
+
+
+# --- QUERY 3: Revenue & Quantity by Product Category ---
+# We JOIN fact_sales with dim_products
+query_products = """
+    SELECT 
+        p.category_name AS "Product Category",
+        SUM(f.quantity) AS "Total Units Sold",
+        ROUND(SUM(f.total_revenue), 2) AS "Total Revenue Generated"
+    FROM fact_sales f
+    JOIN dim_products p ON f.product_category_id = p.product_category_id
+    GROUP BY p.category_name
+    ORDER BY "Total Revenue Generated" DESC;
+"""
+
+print("🛍️ INSIGHT 3: Product Category Performance")
+df_products = pd.read_sql(query_products, conn)
+print(df_products.to_string(index=False))
+
+conn.close()
+print("\n🏁 SQL analysis queries completed successfully!")
